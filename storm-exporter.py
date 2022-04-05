@@ -276,7 +276,6 @@ def topologySummaryMetric(topology_summary, stormUiHost):
     try:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/" + tid)
         topologyMetric(r.json())
-        print(r.json())
     except requests.exceptions.RequestException as e:
         print(e)
         sys.exit(1)
