@@ -407,7 +407,7 @@ while True:
     try:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/summary")
         resp_cluster_sum = requests.get("http://" + stormUiHost + "/api/v1/cluster/summary")
-        clusterSummaryMetrics(resp_cluster_sum)
+        clusterSummaryMetrics(resp_cluster_sum.json())
         print("caught metrics")
         for topology in r.json()["topologies"]:
             topologySummaryMetric(topology, stormUiHost)
