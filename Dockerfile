@@ -6,8 +6,8 @@ RUN apk add --no-cache python3 curl && \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
-COPY storm_exporter.py /app
+COPY storm-exporter.py /app
 
-EXPOSE 8000
+EXPOSE 9095
 
-ENTRYPOINT [ "/bin/sh", "-c", "python3 /app/storm_exporter.py $STORM_UI_HOST 8000 $REFRESH_RATE" ]
+ENTRYPOINT [ "/bin/sh", "-c", "python3 /app/storm-exporter.py $STORM_UI_HOST 9095 $REFRESH_RATE" ]

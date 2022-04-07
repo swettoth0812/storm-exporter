@@ -4,6 +4,65 @@ import sys
 import requests
 from prometheus_client import start_http_server, Gauge
 
+# CLUSTER/SUMMARY METRICS
+STORM_CLUSTER_STORM_VERSION = Gauge(
+    "cluster_storm_version",
+    "Storm version",
+)
+STORM_CLUSTER_SUPERVISORS_TOTAL = Gauge(
+    "cluster_supervisor_total",
+    "Number of supervisors running",
+)
+STORM_CLUSTER_TOPOLOGIES_TOTAL = Gauge(
+    "cluster_topology_total",
+    "Number of topologies running",
+)
+STORM_CLUSTER_TOTAL_WORKER_SLOTS = Gauge(
+    "cluster_total_worker_slots",
+    "Total number of total worker slots",
+)
+STORM_CLUSTER_USED_WORKER_SLOTS = Gauge(
+    "cluster_used_worker_slots",
+    "Total number of used worker slots",
+)
+STORM_CLUSTER_FREE_WORKER_SLOTS = Gauge(
+    "cluster_free_worker_slots",
+    "Total number of free worker slots",
+)
+STORM_CLUSTER_EXECUTORS_TOTAL = Gauge(
+    "cluster_executor_total",
+    "Total number of executors",
+)
+STORM_CLUSTER_TASKS_TOTAL = Gauge(
+    "cluster_task_total",
+    "Total number of tasks",
+)
+STORM_CLUSTER_MEMORY_TOTAL = Gauge(
+    "cluster_mem_total",
+    "The total amount of memory in the cluster in MB",
+)
+STORM_CLUSTER_MEMORY_AVAIL = Gauge(
+    "cluster_mem_avail",
+    "The amount of available memory in the cluster in MB",
+)
+STORM_CLUSTER_MEMORY_ASSIGNED_PERCENT_UTIL = Gauge(
+    "cluster_mem_assigned_per_util",
+    "The percent utilization of assigned memory resources in cluster",
+)
+STORM_CLUSTER_CPU_TOTAL = Gauge(
+    "cluster_cpu_total",
+    "The total amount of CPU in the cluster",
+)
+STORM_CLUSTER_CPU_AVAIL = Gauge(
+    "cluster_cpu_avail",
+    "The amount of available CPU in the cluster",
+)
+STORM_CLUSTER_CPU_ASSIGNED_PERCENT_UTIL = Gauge(
+    "cluster_cpu_assigned_per_util",
+    "The percent utilization of assigned CPU resources in cluster",
+)
+
+
 # TOPOLOGY/SUMMARY METRICS
 STORM_TOPOLOGY_UPTIME_SECONDS = Gauge(
     "uptime_seconds",
@@ -94,6 +153,28 @@ TOPOLOGY_STATS_FAILED = Gauge(
     ["TopologyName", "TopologyId", "window"],
 )
 
+# TOPOLOGY/ID WORKERS METRICS:
+STORM_TOPOLOGY_WORKER_ASSIGNED_MEM_ON_HEAP = Gauge(
+    "worker_mem_assigned_on_heap",
+    "Assigned On-Heap Memory by Scheduler (MB)",
+    ["TopologyName", "TopologyId", "Supervisor"],
+)
+STORM_TOPOLOGY_WORKER_EXECUTORS = Gauge(
+    "worker_executors",
+    "Number of executors used by the topology in this worker",
+    ["TopologyName", "TopologyId", "Supervisor"],
+)
+STORM_TOPOLOGY_WORKER_ASSIGNED_CPU_ON_HEAP = Gauge(
+    "worker_cpu_assigned_on_heap",
+    "Assigned CPU",
+    ["TopologyName", "TopologyId", "Supervisor"],
+)
+STORM_TOPOLOGY_WORKER_COMPONENT_NUM_TASK = Gauge(
+    "worker_component_num_task",
+    "Components -> # of executing tasks",
+    ["TopologyName", "TopologyId", "Supervisor","BoltId"],
+)
+
 # TOPOLOGY/ID SPOUT METRICS:
 STORM_TOPOLOGY_SPOUTS_EXECUTORS = Gauge(
     "spouts_executors",
@@ -174,6 +255,8 @@ STORM_TOPOLOGY_BOLTS_EMITTED = Gauge(
 )
 
 
+
+
 def getMetric(metric):
     if metric == None:
         return 0
@@ -190,6 +273,16 @@ def statsMetric(stat, tn, tid):
     )
     TOPOLOGY_STATS_ACKED.labels(tn, tid, wd).set(getMetric(stat["acked"]))
     TOPOLOGY_STATS_FAILED.labels(tn, tid, wd).set(getMetric(stat["failed"]))
+
+
+def workersMetric(worker, tn, tid):
+    sphost=worker['host']
+    STORM_TOPOLOGY_WORKER_ASSIGNED_MEM_ON_HEAP.labels(tn,tid,sphost).set(getMetric(worker['assignedMemOnHeap']))
+    STORM_TOPOLOGY_WORKER_EXECUTORS.labels(tn,tid,sphost).set(getMetric(worker['executorsTotal']))
+    STORM_TOPOLOGY_WORKER_ASSIGNED_CPU_ON_HEAP.labels(tn,tid,sphost).set(getMetric(worker['assignedCpu']))
+    for numTask in worker['componentNumTasks']:
+        STORM_TOPOLOGY_WORKER_COMPONENT_NUM_TASK.labels(tn,tid,sphost,numTask).set(getMetric(worker['componentNumTasks'][numTask]))
+
 
 
 def spoutMetric(spout, tn, tid):
@@ -234,11 +327,29 @@ def topologyMetric(topology):
     tid = topology["id"]
     for stat in topology["topologyStats"]:
         statsMetric(stat, tn, tid)
+    for worker in topology['workers']:
+        workersMetric(worker, tn, tid)
     for spout in topology["spouts"]:
         spoutMetric(spout, tn, tid)
     for bolt in topology["bolts"]:
         boltMetric(bolt, tn, tid)
+    
 
+
+def clusterSummaryMetrics(cluster_summary):
+    STORM_CLUSTER_MEMORY_TOTAL.set(cluster_summary['totalMem'])
+    STORM_CLUSTER_FREE_WORKER_SLOTS.set(cluster_summary['slotsFree'])
+    STORM_CLUSTER_MEMORY_ASSIGNED_PERCENT_UTIL.set(cluster_summary['memAssignedPercentUtil'])
+    STORM_CLUSTER_TOPOLOGIES_TOTAL.set(cluster_summary['topologies'])
+    STORM_CLUSTER_MEMORY_AVAIL.set(cluster_summary['availMem'])
+    STORM_CLUSTER_CPU_TOTAL.set(cluster_summary['totalCpu'])
+    STORM_CLUSTER_SUPERVISORS_TOTAL.set(cluster_summary['supervisors'])
+    STORM_CLUSTER_CPU_ASSIGNED_PERCENT_UTIL.set(cluster_summary['cpuAssignedPercentUtil'])
+    STORM_CLUSTER_TASKS_TOTAL.set(cluster_summary['tasksTotal'])
+    STORM_CLUSTER_CPU_AVAIL.set(cluster_summary['availCpu'])
+    STORM_CLUSTER_USED_WORKER_SLOTS.set(cluster_summary['slotsUsed'])
+    STORM_CLUSTER_TOTAL_WORKER_SLOTS.set(cluster_summary['slotsTotal'])
+    
 
 def topologySummaryMetric(topology_summary, stormUiHost):
     tn = topology_summary["name"]
@@ -295,6 +406,8 @@ start_http_server(httpPort)
 while True:
     try:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/summary")
+        resp_cluster_sum = requests.get("http://" + stormUiHost + "/api/v1/cluster/summary")
+        clusterSummaryMetrics(resp_cluster_sum)
         print("caught metrics")
         for topology in r.json()["topologies"]:
             topologySummaryMetric(topology, stormUiHost)
