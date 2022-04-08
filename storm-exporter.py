@@ -2,7 +2,7 @@
 import time
 import sys
 import requests
-from prometheus_client import start_http_server, Gauge
+from prometheus_client import start_http_server, Gauge, Enum
 
 # CLUSTER/SUMMARY METRICS
 STORM_CLUSTER_STORM_VERSION = Gauge(
@@ -62,6 +62,12 @@ STORM_CLUSTER_CPU_ASSIGNED_PERCENT_UTIL = Gauge(
     "The percent utilization of assigned CPU resources in cluster",
 )
 
+# NIMBUS/SUMMARY METRICS
+STORM_NIMBUS_STATUS = Enum(
+    "nimbus_status",
+    "Nimbus Status, Possible values are Leader, Not a Leader, Dead",
+    states=["Leader", "Not a Leader", "Dead"],
+)
 
 # TOPOLOGY/SUMMARY METRICS
 STORM_TOPOLOGY_UPTIME_SECONDS = Gauge(
@@ -335,7 +341,6 @@ def topologyMetric(topology):
         boltMetric(bolt, tn, tid)
     
 
-
 def clusterSummaryMetrics(cluster_summary):
     STORM_CLUSTER_MEMORY_TOTAL.set(cluster_summary['totalMem'])
     STORM_CLUSTER_FREE_WORKER_SLOTS.set(cluster_summary['slotsFree'])
@@ -350,6 +355,10 @@ def clusterSummaryMetrics(cluster_summary):
     STORM_CLUSTER_USED_WORKER_SLOTS.set(cluster_summary['slotsUsed'])
     STORM_CLUSTER_TOTAL_WORKER_SLOTS.set(cluster_summary['slotsTotal'])
     STORM_CLUSTER_EXECUTORS_TOTAL.set(cluster_summary['executorsTotal'])
+
+def nimbusSummaryMetrics(nimbus_summary):
+    STORM_NIMBUS_STATUS.labels(nimbus_host=nimbus_summary['host']).state(nimbus_summary['status'])
+    
 
 def topologySummaryMetric(topology_summary, stormUiHost):
     tn = topology_summary["name"]
@@ -390,7 +399,7 @@ def topologySummaryMetric(topology_summary, stormUiHost):
     except requests.exceptions.RequestException as e:
         print(e)
         sys.exit(1)
-
+    
 
 if len(sys.argv) != 4:
     print(
@@ -407,6 +416,9 @@ while True:
     try:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/summary")
         resp_cluster_sum = requests.get("http://" + stormUiHost + "/api/v1/cluster/summary")
+        resp_nimbus_sum = requests.get("http://" + stormUiHost + "/api/v1/nimbus/summary")
+        for nimbus in resp_nimbus_sum.json():
+            nimbusSummaryMetrics(nimbus)
         clusterSummaryMetrics(resp_cluster_sum.json())
         print("caught metrics")
         for topology in r.json()["topologies"]:
