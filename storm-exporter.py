@@ -349,7 +349,7 @@ def clusterSummaryMetrics(cluster_summary):
     STORM_CLUSTER_CPU_AVAIL.set(cluster_summary['availCpu'])
     STORM_CLUSTER_USED_WORKER_SLOTS.set(cluster_summary['slotsUsed'])
     STORM_CLUSTER_TOTAL_WORKER_SLOTS.set(cluster_summary['slotsTotal'])
-    
+    STORM_CLUSTER_EXECUTORS_TOTAL.set(cluster_summary['executorsTotal'])
 
 def topologySummaryMetric(topology_summary, stormUiHost):
     tn = topology_summary["name"]
