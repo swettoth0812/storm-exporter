@@ -66,6 +66,7 @@ STORM_CLUSTER_CPU_ASSIGNED_PERCENT_UTIL = Gauge(
 STORM_NIMBUS_STATUS = Enum(
     "nimbus_status",
     "Nimbus Status, Possible values are Leader, Not a Leader, Dead",
+    ["Nimbus"],
     states=["Leader", "Not a Leader", "Dead"],
 )
 
@@ -357,7 +358,8 @@ def clusterSummaryMetrics(cluster_summary):
     STORM_CLUSTER_EXECUTORS_TOTAL.set(cluster_summary['executorsTotal'])
 
 def nimbusSummaryMetrics(nimbus_summary):
-    STORM_NIMBUS_STATUS.labels(nimbus_host=nimbus_summary['host']).state(nimbus_summary['status'])
+    nhost=nimbus_summary['host']
+    STORM_NIMBUS_STATUS.labels(nhost).state(nimbus_summary['status'])
     
 
 def topologySummaryMetric(topology_summary, stormUiHost):
@@ -417,7 +419,7 @@ while True:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/summary")
         resp_cluster_sum = requests.get("http://" + stormUiHost + "/api/v1/cluster/summary")
         resp_nimbus_sum = requests.get("http://" + stormUiHost + "/api/v1/nimbus/summary")
-        for nimbus in resp_nimbus_sum.json():
+        for nimbus in resp_nimbus_sum.json()["nimbuses"]:
             nimbusSummaryMetrics(nimbus)
         clusterSummaryMetrics(resp_cluster_sum.json())
         print("caught metrics")
