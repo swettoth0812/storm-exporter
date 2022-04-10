@@ -164,22 +164,22 @@ TOPOLOGY_STATS_FAILED = Gauge(
 STORM_TOPOLOGY_WORKER_ASSIGNED_MEM_ON_HEAP = Gauge(
     "worker_mem_assigned_on_heap",
     "Assigned On-Heap Memory by Scheduler (MB)",
-    ["TopologyName", "TopologyId", "Supervisor"],
+    ["TopologyName", "TopologyId", "Supervisor","Port"],
 )
 STORM_TOPOLOGY_WORKER_EXECUTORS = Gauge(
     "worker_executors",
     "Number of executors used by the topology in this worker",
-    ["TopologyName", "TopologyId", "Supervisor"],
+    ["TopologyName", "TopologyId", "Supervisor","Port"],
 )
 STORM_TOPOLOGY_WORKER_ASSIGNED_CPU_ON_HEAP = Gauge(
     "worker_cpu_assigned_on_heap",
     "Assigned CPU",
-    ["TopologyName", "TopologyId", "Supervisor"],
+    ["TopologyName", "TopologyId", "Supervisor","Port"],
 )
 STORM_TOPOLOGY_WORKER_COMPONENT_NUM_TASK = Gauge(
     "worker_component_num_task",
     "Components -> # of executing tasks",
-    ["TopologyName", "TopologyId", "Supervisor","BoltId"],
+    ["TopologyName", "TopologyId", "Supervisor","BoltId","Port"],
 )
 
 # TOPOLOGY/ID SPOUT METRICS:
@@ -284,11 +284,12 @@ def statsMetric(stat, tn, tid):
 
 def workersMetric(worker, tn, tid):
     sphost=worker['host']
-    STORM_TOPOLOGY_WORKER_ASSIGNED_MEM_ON_HEAP.labels(tn,tid,sphost).set(getMetric(worker['assignedMemOnHeap']))
-    STORM_TOPOLOGY_WORKER_EXECUTORS.labels(tn,tid,sphost).set(getMetric(worker['executorsTotal']))
-    STORM_TOPOLOGY_WORKER_ASSIGNED_CPU_ON_HEAP.labels(tn,tid,sphost).set(getMetric(worker['assignedCpu']))
+    wport=worker['port']
+    STORM_TOPOLOGY_WORKER_ASSIGNED_MEM_ON_HEAP.labels(tn,tid,sphost,wport).set(getMetric(worker['assignedMemOnHeap']))
+    STORM_TOPOLOGY_WORKER_EXECUTORS.labels(tn,tid,sphost,wport).set(getMetric(worker['executorsTotal']))
+    STORM_TOPOLOGY_WORKER_ASSIGNED_CPU_ON_HEAP.labels(tn,tid,sphost,wport).set(getMetric(worker['assignedCpu']))
     for numTask in worker['componentNumTasks']:
-        STORM_TOPOLOGY_WORKER_COMPONENT_NUM_TASK.labels(tn,tid,sphost,numTask).set(getMetric(worker['componentNumTasks'][numTask]))
+        STORM_TOPOLOGY_WORKER_COMPONENT_NUM_TASK.labels(tn,tid,sphost,numTask,wport).set(getMetric(worker['componentNumTasks'][numTask]))
 
 
 
