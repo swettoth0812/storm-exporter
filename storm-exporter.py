@@ -313,10 +313,10 @@ def spoutMetric(spout, tn, tid):
 def boltMetric(bolt, tn, tid):
     bid = bolt["boltId"]
     STORM_TOPOLOGY_BOLTS_CAPACITY.labels(tn, tid, bid).set(
-        getMetric(bolt["processLatency"])
+        getMetric(bolt["capacity"])
     )
     STORM_TOPOLOGY_BOLTS_PROCESS_LATENCY.labels(tn, tid, bid).set(
-        getMetric(bolt["capacity"])
+        getMetric(bolt["processLatency"])
     )
     STORM_TOPOLOGY_BOLTS_EXECUTE_LATENCY.labels(tn, tid, bid).set(
         getMetric(bolt["executeLatency"])
