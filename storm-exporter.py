@@ -70,6 +70,43 @@ STORM_NIMBUS_STATUS = Enum(
     states=["Leader", "Not a Leader", "Dead"],
 )
 
+# SUPERVISOR/SUMMARY METRICS
+STORM_SUPERVISOR_UPTIME_SECOND = Gauge(
+    "supervisor_uptime_second",
+    "Shows how long the supervisor is running in seconds",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_SLOTS_TOTAL = Gauge(
+    "supervisor_slots_total",
+    "Total number of available worker slots for this supervisor",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_SLOTS_USED = Gauge(
+    "supervisor_slots_used",
+    "Number of worker slots used on this supervisor",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_MEM_TOTAL = Gauge(
+    "supervisor_memory_total",
+    "Total memory capacity on this supervisor",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_MEM_USED = Gauge(
+    "supervisor_memory_used",
+    "Used memory capacity on this supervisor",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_CPU_TOTAL = Gauge(
+    "supervisor_cpu_total",
+    "Total CPU capacity on this supervisor",
+    ["Supervisor"],
+)
+STORM_SUPERVISOR_CPU_USED = Gauge(
+    "supervisor_cpu_used",
+    "Used CPU capacity on this supervisor",
+    ["Supervisor"],
+)
+
 # TOPOLOGY/SUMMARY METRICS
 STORM_TOPOLOGY_UPTIME_SECONDS = Gauge(
     "uptime_seconds",
@@ -361,7 +398,16 @@ def clusterSummaryMetrics(cluster_summary):
 def nimbusSummaryMetrics(nimbus_summary):
     nhost=nimbus_summary['host']
     STORM_NIMBUS_STATUS.labels(nhost).state(nimbus_summary['status'])
-    
+
+def supervisorSummaryMetrics(supervisor_summary):
+    suphost = supervisor_summary['host']
+    STORM_SUPERVISOR_UPTIME_SECOND.labels(suphost).set(supervisor_summary['uptimeSeconds'])
+    STORM_SUPERVISOR_SLOTS_TOTAL.labels(suphost).set(supervisor_summary['slotsTotal'])
+    STORM_SUPERVISOR_SLOTS_USED.labels(suphost).set(supervisor_summary['slotsUsed'])
+    STORM_SUPERVISOR_MEM_TOTAL.labels(suphost).set(supervisor_summary['totalMem'])
+    STORM_SUPERVISOR_MEM_USED.labels(suphost).set(supervisor_summary['usedMem'])
+    STORM_SUPERVISOR_CPU_TOTAL.labels(suphost).set(supervisor_summary['totalCpu'])
+    STORM_SUPERVISOR_CPU_USED.labels(suphost).set(supervisor_summary['usedCPU'])
 
 def topologySummaryMetric(topology_summary, stormUiHost):
     tn = topology_summary["name"]
@@ -420,6 +466,9 @@ while True:
         r = requests.get("http://" + stormUiHost + "/api/v1/topology/summary")
         resp_cluster_sum = requests.get("http://" + stormUiHost + "/api/v1/cluster/summary")
         resp_nimbus_sum = requests.get("http://" + stormUiHost + "/api/v1/nimbus/summary")
+        resp_supervisor_sum = requests.get("http://" + stormUiHost + "/api/v1/supervisor/summary")
+        for supervisor in resp_supervisor_sum.json()["supervisors"]:
+            supervisorSummaryMetrics(supervisor)
         for nimbus in resp_nimbus_sum.json()["nimbuses"]:
             nimbusSummaryMetrics(nimbus)
         clusterSummaryMetrics(resp_cluster_sum.json())
