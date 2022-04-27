@@ -407,7 +407,7 @@ def supervisorSummaryMetrics(supervisor_summary):
     STORM_SUPERVISOR_MEM_TOTAL.labels(suphost).set(supervisor_summary['totalMem'])
     STORM_SUPERVISOR_MEM_USED.labels(suphost).set(supervisor_summary['usedMem'])
     STORM_SUPERVISOR_CPU_TOTAL.labels(suphost).set(supervisor_summary['totalCpu'])
-    STORM_SUPERVISOR_CPU_USED.labels(suphost).set(supervisor_summary['usedCPU'])
+    STORM_SUPERVISOR_CPU_USED.labels(suphost).set(supervisor_summary['usedCpu'])
 
 def topologySummaryMetric(topology_summary, stormUiHost):
     tn = topology_summary["name"]
